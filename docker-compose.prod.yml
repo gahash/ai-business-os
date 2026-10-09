@@ -1,0 +1,37 @@
+# Production overrides. Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Differences from the dev compose file: no source bind-mounts (code is baked into the image),
+# no --reload/dev servers, database/cache ports not published to the host, restart policy
+# tightened to "always".
+
+services:
+  backend:
+    volumes: []
+    command: ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+    restart: always
+
+  frontend:
+    restart: always
+
+  worker:
+    volumes: []
+    restart: always
+
+  scheduler:
+    volumes: []
+    restart: always
+
+  postgres:
+    ports: []
+    restart: always
+
+  redis:
+    ports: []
+    restart: always
+
+  ollama:
+    restart: always
+
+  reverse-proxy:
+    restart: always

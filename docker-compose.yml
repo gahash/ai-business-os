@@ -1,0 +1,123 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    env_file: .env
+    volumes:
+      - ./apps:/srv/apps
+      - ./core:/srv/core
+      - ./modules:/srv/modules
+      - ./agents:/srv/agents
+      - ./tools:/srv/tools
+      - ./integrations:/srv/integrations
+    command: ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    env_file: .env
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    env_file: .env
+    volumes:
+      - ./apps:/srv/apps
+      - ./core:/srv/core
+      - ./modules:/srv/modules
+      - ./agents:/srv/agents
+      - ./tools:/srv/tools
+      - ./integrations:/srv/integrations
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/scheduler.Dockerfile
+    env_file: .env
+    volumes:
+      - ./apps:/srv/apps
+      - ./core:/srv/core
+      - ./modules:/srv/modules
+      - ./agents:/srv/agents
+      - ./tools:/srv/tools
+      - ./integrations:/srv/integrations
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_business_os
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+  reverse-proxy:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_data:

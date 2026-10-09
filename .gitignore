@@ -1,0 +1,108 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Node / Next.js
+apps/web/node_modules/
+apps/web/.next/
+apps/web/out/
+
+# Env / secrets
+.env
+.env.local
+*.local
+
+# Data
+data/storage/
+
+# Local dev PostgreSQL (no Docker on this machine — see scripts/dev_postgres.py)
+.devdb/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ===== Esclusioni per pubblicazione (Agente Lavoro) =====
+# --- Segreti ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+credentials*.json
+client_secret*.json
+service-account*.json
+token*.json
+config.php
+wp-config.php
+
+# --- Dati ---
+*.sql
+*.sqlite
+*.db
+*.dump
+*.bak
+uploads/
+storage/
+recordings/
+*.wav
+*.mp3
+
+# --- Dipendenze / build ---
+node_modules/
+vendor/
+.venv/
+venv/
+__pycache__/
+dist/
+build/
+.next/
+.expo/
+.gradle/
+
+# --- Log / OS ---
+*.log
+logs/
+.DS_Store
+Thumbs.db
+
+# --- Editor / strumenti locali ---
+.vscode/
+.idea/
+.claude/
+sftp.json
+local.properties
+.kotlin/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+*.db-journal
+.devdb/
+
+# --- Pesi modelli / pacchetti / binari pesanti ---
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.gguf
+*.onnx
+*.apk
+*.aab
+*.tar
+*.tar.gz
+*.zip
+runs/
