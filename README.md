@@ -1,88 +1,106 @@
-# AI Business OS
+# AI Business OS 🧠
 
-Piattaforma operativa AI locale-first per la gestione aziendale: connette CRM, email,
-calendario, pipeline vendite e social, interpreta i dati, propone decisioni ed esegue azioni
-richiedendo approvazione umana quando necessario.
+> Piattaforma operativa **AI local-first** per piccole e medie imprese: collega CRM, email, calendario, pipeline di vendita e social, interpreta i dati, **propone decisioni ed esegue azioni chiedendo l'approvazione umana** quando serve.
 
-Non è un chatbot: opera secondo il ciclo OBSERVE → UNDERSTAND → REASON → PLAN → REQUEST
-APPROVAL → EXECUTE → VERIFY → LOG → LEARN.
+[![Licenza MIT](https://img.shields.io/badge/licenza-MIT-green.svg)](LICENSE)
+![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.11%2B-009688)
+![Next.js](https://img.shields.io/badge/Next.js-TypeScript-000000)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Alembic-336791)
+
+**Stato:** in sviluppo — milestone M1–M3 di 16 completate · **Autore:** Gaspare Pettinati
+
+---
+
+## L'idea
+Non è un chatbot. Il sistema lavora secondo un ciclo esplicito e verificabile:
+
+```mermaid
+flowchart LR
+    O[OBSERVE] --> U[UNDERSTAND] --> R[REASON] --> P[PLAN]
+    P --> A{REQUEST<br/>APPROVAL}
+    A -->|approvato| E[EXECUTE] --> V[VERIFY] --> L[LOG] --> LE[LEARN]
+    LE -.-> O
+```
+
+Ogni azione che tocca clienti, soldi o dati passa da una **richiesta di approvazione** e lascia una traccia di audit.
 
 ## Stato del progetto
+| Milestone | Contenuto | Stato |
+|---|---|---|
+| M1 — Infrastruttura | struttura del repo, backend FastAPI e frontend Next.js che comunicano | ✅ |
+| M2 — Database | schema PostgreSQL con migrazioni Alembic e dati demo | ✅ |
+| M3 — Auth + RBAC | login JWT con refresh rotante, reset password, permessi `risorsa.azione`, isolamento tra tenant | ✅ |
+| M4 → M16 | CRM, agenti, integrazioni, workflow, osservabilità… | 🔜 vedi [ROADMAP.md](ROADMAP.md) |
 
-**M1 — Infrastruttura, M2 — Database, M3 — Auth + RBAC: completate.** Scheletro repo, backend
-FastAPI e frontend Next.js si avviano e comunicano tra loro; schema PostgreSQL reale con
-Alembic e seed di demo; login JWT con refresh rotante e RBAC via permessi `resource.action` —
-tutto verificato contro un database reale (locale, non containerizzato — Docker non è
-installato qui, vedi [TODO.md](TODO.md)). Vedi [ROADMAP.md](ROADMAP.md) per il piano completo.
-
-## Documenti di riferimento
-
-- [ROADMAP.md](ROADMAP.md) — milestone sequenziali (M1…M16), mappate alla specifica tecnica
-  completa e all'ordine di sviluppo obbligatorio
-- [TODO.md](TODO.md) — todo tecnico corrente, aggiornato ad ogni milestone
-- [CHANGELOG.md](CHANGELOG.md) — cronologia delle modifiche rilasciate
+Tutto ciò che è segnato come completato è **testato contro un database PostgreSQL reale**: nessuna integrazione simulata spacciata per reale.
 
 ## Principi architetturali
+Local First · Privacy First · Security First · API First · AI Provider Agnostic · Event Driven · Auditable · Multi Tenant · Human In The Loop · Fail Safe · Observable · Modular
 
-Local First · Privacy First · Security First · API First · AI Provider Agnostic ·
-Event Driven · Auditable · Multi Tenant Ready · Human In The Loop · Fail Safe ·
-Observable · Modular
+## Architettura (obiettivo)
 
-## Stack (target)
+```mermaid
+flowchart LR
+    W[Next.js] --> API[FastAPI]
+    API --> DB[(PostgreSQL)]
+    API --> R[(Redis)]
+    R --> WK[Worker Celery]
+    R --> SC[Scheduler]
+    WK --> AI[LLM locale<br/>Ollama o provider a scelta]
+    WK --> INT[Integrazioni<br/>CRM · email · calendario · social]
+    API --> EV[Bus eventi + audit]
+```
 
-- **Backend:** Python 3.12+ (in sviluppo locale su questa macchina: 3.11.8, unica versione
-  disponibile — vedi TODO.md), FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, PostgreSQL, Redis,
-  Celery, httpx, WebSocket
-- **Frontend:** Next.js, React, TypeScript, TailwindCSS, TanStack Query, Zustand,
-  React Hook Form, Zod (questi ultimi quattro verranno aggiunti quando serviranno, a partire da
-  M4/M8)
-- **Infra:** Docker Compose (frontend, backend, postgres, redis, worker, scheduler, ollama,
-  reverse-proxy; opzionali: qdrant, minio, prometheus, grafana, loki, temporal)
+## Stack
+| Livello | Tecnologie |
+|---|---|
+| Backend | Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic |
+| Database e code | PostgreSQL, Redis, Celery |
+| Frontend | Next.js, React, TypeScript, Tailwind CSS |
+| AI | indipendente dal provider, LLM locale come predefinito |
+| Infrastruttura | Docker Compose (frontend, backend, postgres, redis, worker, scheduler, ollama, reverse proxy) |
+| Qualità | pytest (unit, integrazione, sicurezza), ruff, mypy |
 
-## Setup locale
+## Avvio
 
-### Con Docker (consigliato, non ancora verificato su questa macchina)
+### Con Docker
 
 ```bash
-cp .env.example .env
+git clone https://github.com/gahash/ai-business-os.git
+cd ai-business-os
+cp .env.example .env               # genera JWT_SECRET, APP_SECRET, ENCRYPTION_KEY (vedi sotto)
 docker compose up -d
-docker compose exec backend alembic upgrade head   # da M2 in poi
+docker compose exec backend alembic upgrade head
 ```
 
 - API: http://localhost:8000/health
 - Frontend: http://localhost:3000
-- Reverse proxy: http://localhost (instrada `/` al frontend, `/api/` e `/health` al backend)
+- Reverse proxy: http://localhost
 
-### Senza Docker (verificato — usato in sviluppo su questa macchina)
-
-Database (PostgreSQL nativo via `pgserver`, nessun installer/servizio richiesto — vedi
-`scripts/dev_postgres.py` e la sezione "Limitazioni note" in [TODO.md](TODO.md)):
-
-```bash
-.venv/Scripts/python -m scripts.dev_postgres start
-.venv/Scripts/python -m alembic upgrade head
-.venv/Scripts/python -m scripts.seed
-```
-
-Backend:
+### Senza Docker
+Il database di sviluppo usa PostgreSQL nativo tramite `pgserver`: nessun installer né servizio di sistema.
 
 ```bash
 py -3.11 -m venv .venv
 .venv/Scripts/python -m pip install -e ".[dev]"
+
+.venv/Scripts/python -m scripts.dev_postgres start
+.venv/Scripts/python -m alembic upgrade head
+.venv/Scripts/python -m scripts.seed
+
 .venv/Scripts/python -m uvicorn apps.api.main:app --reload --port 8000
 ```
 
-Frontend (in un altro terminale):
+Frontend, in un altro terminale:
 
 ```bash
 cd apps/web
 npm install
-npm run dev
+npm run dev                          # http://localhost:3000
 ```
 
-Poi apri http://localhost:3000 — la home mostra lo stato live restituito da `/health`.
-
-Login contro il tenant demo (creato da `scripts.seed`):
+### Login sul tenant demo
+Il comando `scripts.seed` crea un tenant `demo` con credenziali **solo dimostrative**:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
@@ -90,18 +108,26 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
   -d '{"tenant_slug":"demo","email":"owner@demo.local","password":"ChangeMe123!"}'
 ```
 
-Nota: `JWT_SECRET`/`APP_SECRET`/`ENCRYPTION_KEY` devono essere valori reali generati (non la
-stringa vuota di default in `.env.example`) perché la firma dei JWT abbia senso — copia
-`.env.example` in `.env` e genera dei valori, es. con
-`python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+### Segreti
+`JWT_SECRET`, `APP_SECRET` ed `ENCRYPTION_KEY` vanno generati, non lasciati vuoti:
 
-### Makefile
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
 
-I target in `Makefile` (§148) presuppongono `make` e Docker installati. Su questa macchina
-nessuno dei due è disponibile: i comandi equivalenti sono quelli sopra.
+## Test
 
-## Regole di sviluppo
+```bash
+.venv/Scripts/python -m pytest
+```
 
-Vedi la sezione "Accordi di lavoro per questo repo" in [ROADMAP.md](ROADMAP.md#accordi-di-lavoro-per-questo-repo-202204):
-niente pseudo-codice, niente funzioni vuote, niente integrazioni simulate spacciate per reali,
-niente feature dichiarata "done" senza test e senza superare la sua Definition of Done.
+## Documenti
+- [ROADMAP.md](ROADMAP.md) — milestone M1…M16 e regole di sviluppo
+- [TODO.md](TODO.md) — lavoro tecnico in corso e limitazioni note
+- [CHANGELOG.md](CHANGELOG.md) — modifiche rilasciate
+
+Regole del progetto: niente pseudo-codice, niente funzioni vuote, niente integrazioni simulate presentate come reali, niente funzionalità "fatta" senza test e senza superare la sua Definition of Done.
+
+---
+
+**Licenza:** [MIT](LICENSE) · **Contatti:** [gasparepettinati.it](https://gasparepettinati.it) · info@gasparepettinati.it
